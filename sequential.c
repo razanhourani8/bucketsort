@@ -1,4 +1,3 @@
-#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +17,7 @@ int main(int argc, char *argv[]) {
     int *arr, *temp;
     int size, num_buckets, i, width, j, limit;
     struct Bucket *buckets;
-    double start_time;
+    clock_t start_time, end_time;
     float total_time;
 
     printf("Enter the length of the array to sort: \n");
@@ -37,10 +36,10 @@ int main(int argc, char *argv[]) {
     buckets = (struct Bucket *)calloc(num_buckets, sizeof(struct Bucket));
 
     for (i = 0; i < size; i++) {
-        arr[i] = random() % limit;
+        arr[i] = rand() % limit;
     }
-    
-    start_time = omp_get_wtime();
+
+    start_time = clock();
     
     for (i = 0; i < size; i++) {
         j = arr[i] / width;
@@ -63,12 +62,12 @@ int main(int argc, char *argv[]) {
         arr[b_index] = arr[i];
     }
 
-    #pragma omp parallel for private(i)
     for (i = 0; i < num_buckets; i++) {
         qsort(arr + buckets[i].start, buckets[i].num_elems, sizeof(int), cmp);
     }
 
-    total_time = omp_get_wtime() - start_time;
+    end_time = clock();
+    total_time = ((float)(end_time - start_time)) / CLOCKS_PER_SEC;
 
     printf("Sorted array: \n");
     for (i = 0; i < size; i++) {
@@ -88,4 +87,6 @@ int main(int argc, char *argv[]) {
 
     free(arr);
     free(buckets);
+
+    return 0;
 }
