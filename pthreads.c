@@ -5,24 +5,23 @@
 #include <float.h>
 #include <sys/time.h>
 #include <pthread.h>
-#include "mysort.h"
 
 struct Node {
     float value;
     struct Node *next;
 };
 
-int bucketSize;
-struct Node **bucketHeads;
+int numBuckets;
+struct Node **bucketArray;
 float maxValue = -INFINITY;
 float minValue = INFINITY;
-int threadCount = 2;
+int numThreads = 2;
 
 void *bucketSort(void *arg);
 struct Node *insertionSort(struct Node *list);
 
-int pthreadSort(int numElements, float *data) {
-
+int sortArray(int numElements, float *data) {
+    // Finding the min and max values in the data
     for (int i = 0; i < numElements; i++) {
         if (maxValue < data[i]) {
             maxValue = data[i];
@@ -31,44 +30,45 @@ int pthreadSort(int numElements, float *data) {
             minValue = data[i];
         }
     }
+    // If all elements are the same, no sorting is needed
     if (minValue == maxValue) {
         return 0;
     }
 
-    bucketSize = numElements / 2;
-    bucketHeads = (struct Node **)malloc(sizeof(struct Node*) * numElements);
-    for (int i = 0; i < bucketSize; i++) {
-        bucketHeads[i] = NULL;
+    numBuckets = numElements / 2;
+    bucketArray = (struct Node **)malloc(sizeof(struct Node*) * numElements);
+    for (int i = 0; i < numBuckets; i++) {
+        bucketArray[i] = NULL;
     }
 
-
+    // Creating buckets and distributing data into them
     float width = maxValue - minValue + 0.00001;
     struct Node *node = NULL;
     for (int i = 0; i < numElements; i++) {
         node = (struct Node *)malloc(sizeof(struct Node));
-        int index = int((bucketSize * data[i]) / (maxValue + 0.01));
+        int index = (int)((numBuckets * data[i]) / (maxValue + 0.01));
         node->value = data[i];
-        node->next = bucketHeads[index];
-        bucketHeads[index] = node;
+        node->next = bucketArray[index];
+        bucketArray[index] = node;
     }
 
-
-    pthread_t pthread[threadCount];
-    int *threadArgs = (int *)malloc(sizeof(int) * threadCount);
-    for (int i = 0; i < threadCount; i++) {
+    // Creating threads to sort buckets
+    pthread_t threadArray[numThreads];
+    int *threadArgs = (int *)malloc(sizeof(int) * numThreads);
+    for (int i = 0; i < numThreads; i++) {
         threadArgs[i] = i;
-        pthread_create(&pthread[i], NULL, bucketSort, (void *)&threadArgs[i]);
+        pthread_create(&threadArray[i], NULL, bucketSort, (void *)&threadArgs[i]);
     }
-    for (int i = 0; i < threadCount; i++) {
-        pthread_join(pthread[i], NULL);
+    for (int i = 0; i < numThreads; i++) {
+        pthread_join(threadArray[i], NULL);
     }
     free(threadArgs);
 
-    // Combine sorted buckets
+    // Merging sorted buckets back into the data array
     node = NULL;
     int dataIndex = 0;
-    for (int b = 0; b < bucketSize; b++) {
-        node = bucketHeads[b];
+    for (int b = 0; b < numBuckets; b++) {
+        node = bucketArray[b];
         while (node != NULL) {
             data[dataIndex] = node->value;
             dataIndex++;
@@ -80,10 +80,10 @@ int pthreadSort(int numElements, float *data) {
 
 void *bucketSort(void *arg) {
     int *threadID = (int *)arg;
-    int start = *threadID * bucketSize;
-    int end = start + bucketSize;
+    int start = *threadID * numBuckets;
+    int end = start + numBuckets;
     for (int i = start; i < end; i++) {
-        bucketHeads[i] = insertionSort(bucketHeads[i]);
+        bucketArray[i] = insertionSort(bucketArray[i]);
     }
     return NULL;
 }
