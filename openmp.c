@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define max_threads 1000
+#define max_threads 10000
 
 struct bucket {
     int n_elem;
